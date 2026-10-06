@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lean Lab Operação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Firebase (banco de dados): SDK "compat", sem precisar de build step -->
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+
+<a href="#conteudo" class="skip-link">Pular para o conteúdo</a>
+
+<div id="telaLogin">
+  <aside class="login-brand">
+    <div class="lb-top"><span class="dia"></span><span class="n">Lean Lab Operação</span></div>
+    <div class="lb-mid">
+      <h2>Da etiqueta ao indicador, tudo na mesma linha.</h2>
+      <p>Escaneie o QR Code do posto, registre o tempo de ciclo e acompanhe os resultados em tempo real. Tudo fica registrado no sistema para você consultar quando precisar.</p>
+    </div>
+  </aside>
+  <div class="login-stage">
+  <div class="login-card">
+    <div class="login-marca"><span class="dot"></span><span class="n">Lean Lab Operação</span></div>
+
+    <form id="formLogin" novalidate style="margin-top:14px">
+      <label for="loginNome" class="campo-label" style="margin-top:0">Nome</label>
+      <input id="loginNome" name="nome" autocomplete="username" placeholder="Seu nome" required>
+      <label for="loginSenha" class="campo-label">Senha</label>
+      <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+      <p class="campo-ajuda">Acesso do coordenador.</p>
+      <div class="login-erro" id="loginErro" hidden role="alert"></div>
+      <button type="submit" class="btn-entrar" id="btnEntrar">Entrar</button>
+      <p class="form-hint" id="dbStatus" style="margin-top:12px">Conectando ao banco de dados…</p>
+    </form>
+
+    <details id="entradaOperador" style="margin-top:22px;border-top:1px solid var(--hair);padding-top:16px">
+      <summary style="font-size:12.5px;font-weight:700;color:var(--fraco);cursor:pointer">Sou operador de um posto — ler QR Code</summary>
+      <div style="margin-top:14px">
+        <p class="escolha-intro">Aponte a câmera pra etiqueta do seu posto pra entrar.</p>
+        <div class="visor" id="entradaVisor" style="height:210px;border-radius:8px">
+          <video id="entradaVideo" playsinline muted hidden></video>
+          <div class="quadro" id="entradaQuadroParado">
+            <div class="parado"><b>Câmera desligada</b>Toque abaixo e aponte pra etiqueta do posto.</div>
+            <button class="btn-cam" id="btnLigarCamEntrada" type="button">Ligar câmera</button>
+          </div>
+          <div class="quadro" id="entradaQuadroScan" hidden><div class="q"><span></span><span></span><span></span><span></span></div></div>
+          <div class="status" id="entradaVisorStatus" hidden>Aponte para o QR Code do posto</div>
+        </div>
+        <details class="manual" style="border-top:0;padding:10px 0 0">
+          <summary>Não consigo usar a câmera agora</summary>
+          <div class="manual-form">
+            <label for="entradaManual" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Código do posto</label>
+            <input id="entradaManual" placeholder="ex.: LEANLAB-POSTO-2" class="mono">
+            <button type="button" id="btnEntradaManual">Ler</button>
+          </div>
+        </details>
+
+        <div id="nomeOperadorWrap" hidden style="margin-top:16px">
+          <label for="nomeOperadorInput" class="campo-label" style="margin-top:0">Posto reconhecido: <b id="nomeOperadorPosto"></b> — qual é o seu nome?</label>
+          <input id="nomeOperadorInput" list="listaPessoasPosto" placeholder="Seu nome" autocomplete="off">
+          <datalist id="listaPessoasPosto"></datalist>
+          <button type="button" class="btn-entrar" id="btnConfirmarNomeOperador" style="margin-top:10px">Entrar no posto</button>
+        </div>
+      </div>
+    </details>
+
+  </div>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topo">
+    <div class="wrap">
+      <div class="marca"><span class="sq"></span><span class="n">Lean Lab Operação</span></div>
+      <div class="usr">
+        <span class="av" id="usrAv">B</span>
+        <span class="id"><b id="usrNome">—</b><span id="usrPosto">—</span></span>
+        <button class="icon-btn" id="btnAjuda" type="button" aria-label="Ajuda e glossário de termos">?</button>
+        <button class="sair" id="btnSair" type="button">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabsnav" role="tablist" aria-label="Seções do app">
+    <div class="wrap">
+      <button type="button" id="tabBtn0" role="tab" aria-selected="true" aria-controls="tela0" tabindex="0" data-action="tab" data-tab-idx="0">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg>
+        Painel da linha
+      </button>
+      <button type="button" id="tabBtn1" role="tab" aria-selected="false" aria-controls="tela1" tabindex="-1" data-action="tab" data-tab-idx="1">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><line x1="2.5" y1="6" x2="2.5" y2="2.5"/><line x1="2.5" y1="2.5" x2="6" y2="2.5"/><line x1="14" y1="2.5" x2="17.5" y2="2.5"/><line x1="17.5" y1="2.5" x2="17.5" y2="6"/><line x1="17.5" y1="14" x2="17.5" y2="17.5"/><line x1="17.5" y1="17.5" x2="14" y2="17.5"/><line x1="6" y1="17.5" x2="2.5" y2="17.5"/><line x1="2.5" y1="17.5" x2="2.5" y2="14"/><rect x="8.5" y="8.5" width="3" height="3"/></svg>
+        Ler QR Code
+      </button>
+      <button type="button" id="tabBtn2" role="tab" aria-selected="false" aria-controls="tela2" tabindex="-1" data-action="tab" data-tab-idx="2">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="17" x2="3" y2="10"/><line x1="9" y1="17" x2="9" y2="3"/><line x1="15" y1="17" x2="15" y2="11"/></svg>
+        Relatório da rodada
+      </button>
+      <button type="button" id="tabBtn3" role="tab" aria-selected="false" aria-controls="tela3" tabindex="-1" data-action="tab" data-tab-idx="3">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="9" rx="2"/><circle cx="7" cy="10.2" r="1" fill="currentColor" stroke="none"/><line x1="3.6" y1="6" x2="10" y2="6"/></svg>
+        Etiquetas
+      </button>
+    </div>
+  </nav>
+
+  <main id="conteudo">
+    <!-- TELA 0: PAINEL -->
+    <section class="tela" id="tela0" role="tabpanel" aria-labelledby="tabBtn0" tabindex="-1">
+      <div class="wrap">
+        <h1 class="display">Painel da linha</h1>
+        <p class="lead">Dados reais, gravados no banco de dados a cada leitura confirmada. Toque num posto abaixo ou vá em "Ler QR Code" pra escanear uma etiqueta e ver o painel mudar na hora.</p>
+
+        <div class="painel"><div class="trilho" id="trilho"></div>
+          <div class="legenda">
+            <span class="lg"><i style="background:var(--ok)"></i>dentro do padrão</span>
+            <span class="lg"><i style="background:var(--nok)"></i>acima do objetivo</span>
+            <span style="display:flex;align-items:center">Takt 110 cmin<span class="tip-wrap">
+              <button type="button" class="tip-btn" aria-expanded="false" aria-controls="tipTakt" data-action="toggle-tip">i</button>
+              <span class="tip-pop" id="tipTakt" role="tooltip" hidden>O ritmo que a linha precisa manter pra atender a demanda — cada peça deveria sair da linha nesse intervalo.</span>
+            </span></span>
+          </div>
+        </div>
+
+        <div class="inds" id="inds"></div>
+
+        <div class="grid2">
+          <div class="painel2">
+            <div class="p2-cab"><span class="t">Histórico de leituras</span><span class="c" id="histContagem">0 registros</span></div>
+            <div class="tbl-scroll"><table>
+              <thead><tr><th scope="col">Hora</th><th scope="col">Posto</th><th scope="col">Operador</th><th scope="col">Evento</th></tr></thead>
+              <tbody id="histBody"></tbody>
+            </table></div>
+          </div>
+          <div class="painel2">
+            <div class="p2-cab"><span class="t">Anomalias abertas</span><span class="c" id="anomContagem">0 abertas</span></div>
+            <div class="tbl-scroll"><table>
+              <thead><tr><th scope="col">Posto</th><th scope="col">Descrição</th></tr></thead>
+              <tbody id="anomBody"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA 1: LEITURA / CAMERA -->
+    <section class="tela" id="tela1" role="tabpanel" aria-labelledby="tabBtn1" tabindex="-1" hidden>
+      <div class="wrap">
+        <h1 class="display">Ler QR Code</h1>
+        <p class="lead">Aponte a câmera pra etiqueta do posto. Assim que o código é reconhecido, o app calcula o tempo de ciclo e mostra o resultado pra você decidir o que fazer.</p>
+
+        <div class="passos" id="passos"></div>
+
+        <div class="painel" id="operadorInfoPosto" hidden style="margin-bottom:18px;padding:16px 18px"></div>
+
+        <div class="leitura-wrap">
+          <div class="cel">
+            <div class="c-top">
+              <div><div class="p" id="lp-posto">—</div><div class="s" id="lp-sub">—</div></div>
+              <button class="cam-troca" id="btnTrocarCam" type="button" hidden>Trocar câmera</button>
+            </div>
+            <div class="visor" id="visor">
+              <video id="video" playsinline muted hidden></video>
+              <div class="quadro" id="quadroParado">
+                <div class="parado">
+                  <b>Câmera desligada</b>
+                  Toque abaixo pra ligar e escanear o QR Code da etiqueta.
+                </div>
+                <button class="btn-cam" id="btnLigarCam" type="button">Ligar câmera</button>
+              </div>
+              <div class="quadro" id="quadroScan" hidden>
+                <div class="q"><span></span><span></span><span></span><span></span></div>
+              </div>
+              <div class="quadro" id="quadroPronto" hidden>
+                <div class="check">✓</div>
+                <div class="parado"><b>Etiqueta lida</b>Decida o resultado logo abaixo.</div>
+              </div>
+              <div class="status" id="visorStatus" hidden>Aponte para o QR Code da etiqueta</div>
+            </div>
+            <details class="manual">
+              <summary>Não consigo usar a câmera agora</summary>
+              <div class="manual-form">
+                <label for="manualCodigo" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Código da etiqueta</label>
+                <input id="manualCodigo" placeholder="ex.: LEANLAB-POSTO-2" class="mono">
+                <button type="button" id="btnManual">Registrar</button>
+              </div>
+            </details>
+            <div class="resultado" id="resultadoBox">
+              <div class="semleitura">Nenhuma leitura feita ainda. Ligue a câmera e escaneie uma etiqueta.</div>
+            </div>
+            <div class="acoes">
+              <button class="b1" id="btnConcluir" type="button" disabled>Concluir operação</button>
+              <button class="b2" id="btnRetrabalho" type="button" disabled>Marcar retrabalho</button>
+              <button class="b3" id="btnAnomalia" type="button" disabled>Abrir anomalia com foto</button>
+            </div>
+          </div>
+
+          <div class="como-ler">
+            <h3 class="display">Como funciona esta tela</h3>
+            <ul>
+              <li><b>1. Ligue a câmera</b> e aponte pra uma etiqueta impressa (veja a aba "Etiquetas" pra gerar e imprimir, ou abra em outro celular pra testar).</li>
+              <li><b>2. O app lê o QR Code</b> automaticamente e já calcula um tempo de ciclo pra peça, como se a medição tivesse acabado de acontecer no posto.</li>
+              <li><b>3. Decida o resultado:</b> Concluir operação (grava a leitura e segue o fluxo), Marcar retrabalho (grava como não conforme) ou Abrir anomalia com foto (registra um problema 5S).</li>
+              <li>Cada decisão é gravada no banco de dados na hora e aparece no Painel da linha e no Relatório da rodada, mesmo se você atualizar a página.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA 2: RELATORIO -->
+    <section class="tela" id="tela2" role="tabpanel" aria-labelledby="tabBtn2" tabindex="-1" hidden>
+      <div class="wrap">
+        <h1 class="display">Relatório da rodada</h1>
+        <p class="lead">Calculado a partir de todas as leituras gravadas no banco de dados até agora — nenhum número aqui é digitado à mão.</p>
+
+        <div class="tendencias">
+          <div class="tend-card">
+            <div class="cab"><span class="t">Aderência à FOS ao longo da rodada
+              <span class="tip-wrap"><button type="button" class="tip-btn" aria-expanded="false" aria-controls="tipAder" data-action="toggle-tip">i</button>
+              <span class="tip-pop" id="tipAder" role="tooltip" hidden>Porcentagem das leituras que ficaram dentro do tempo esperado pela Folha de Operação Standard (FOS).</span></span>
+            </span><span class="v num" id="tendAderenciaAgora">—</span></div>
+            <svg id="tendAderenciaSvg" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+            <div class="rot"><span>início</span><span>agora</span></div>
+          </div>
+          <div class="tend-card">
+            <div class="cab"><span class="t">Lead time médio ao longo da rodada
+              <span class="tip-wrap"><button type="button" class="tip-btn" aria-expanded="false" aria-controls="tipLead" data-action="toggle-tip">i</button>
+              <span class="tip-pop" id="tipLead" role="tooltip" hidden>Tempo total que uma peça leva pra passar por todos os postos da linha, do início ao fim.</span></span>
+            </span><span class="v num" id="tendLeadAgora">—</span></div>
+            <svg id="tendLeadSvg" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+            <div class="rot"><span>início</span><span>agora</span></div>
+          </div>
+        </div>
+
+        <div class="balanco">
+          <h3 class="display">Balanceamento da linha</h3>
+          <p>Barra = tempo médio das últimas leituras de cada posto. Traço cinza = objetivo da FOS. Linha tracejada = takt.</p>
+          <div class="graf" id="graf"></div>
+          <div class="rots" id="rots"></div>
+        </div>
+
+        <div class="narrativa">
+          <h3 class="display">Leitura automática da rodada</h3>
+          <div id="narrativaTexto"></div>
+          <p class="f">Texto gerado a partir dos indicadores calculados no banco de dados, revisável pelo instrutor antes de arquivar.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TELA 3: ETIQUETAS -->
+    <section class="tela" id="tela3" role="tabpanel" aria-labelledby="tabBtn3" tabindex="-1" hidden>
+      <div class="wrap">
+        <h1 class="display">Etiquetas dos postos</h1>
+        <p class="lead">Um QR Code real por posto/peça, pra imprimir e colar na bancada ou abrir na tela de outro aparelho e testar o scanner da aba "Ler QR Code".</p>
+        <div class="etq-hint">Cada código carrega só um identificador de posto (ex.: <span class="mono">LEANLAB-POSTO-2</span>). O tempo de ciclo é calculado pelo app no momento da leitura — a etiqueta não guarda nenhum valor de tempo.</div>
+        <div class="qr-grid" id="qrGrid"></div>
+
+        <h3 class="display" style="font-size:16px;margin:30px 0 12px">Pessoas cadastradas por posto</h3>
+        <p class="lead" style="margin-bottom:16px">Cadastre aqui quem trabalha em cada posto. Quando a pessoa escanear a etiqueta do posto no celular dela, o nome já aparece pra escolher rapidinho, sem digitar tudo de novo.</p>
+        <div class="painel2" style="margin-bottom:18px">
+          <div class="p2-cab"><span class="t">Cadastrar pessoa</span></div>
+          <form id="formCadastroPessoa" style="padding:16px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:160px">
+              <label for="cadNome" class="campo-label" style="margin-top:0">Nome</label>
+              <input id="cadNome" placeholder="Nome da pessoa" required>
+            </div>
+            <div style="min-width:180px">
+              <label for="cadPosto" class="campo-label" style="margin-top:0">Posto</label>
+              <select id="cadPosto"></select>
+            </div>
+            <button type="submit" class="btn-entrar" style="margin-top:0;width:auto;padding:0 22px;min-height:46px">Cadastrar</button>
+          </form>
+        </div>
+        <div class="painel2">
+          <div class="p2-cab"><span class="t">Pessoas cadastradas</span><span class="c" id="pessoasContagem">0</span></div>
+          <div class="tbl-scroll"><table>
+            <thead><tr><th scope="col">Nome</th><th scope="col">Posto</th><th scope="col"></th></tr></thead>
+            <tbody id="pessoasBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+  <div class="modal">
+    <h4 id="modalTitulo">Abrir anomalia 5S</h4>
+    <p class="sub" id="modalSub">Descreva o que foi observado no posto.</p>
+    <label for="modalInput" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Descrição da anomalia</label>
+    <input type="text" id="modalInput" maxlength="80" placeholder="Ex.: bandeja vazia não reposta">
+    <div class="btns">
+      <button class="cancelar" id="modalCancelar" type="button">Cancelar</button>
+      <button class="confirmar" id="modalConfirmar" type="button">Registrar anomalia</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOUR DE BOAS-VINDAS -->
+<div class="modal-backdrop" id="tourBackdrop" role="dialog" aria-modal="true" aria-labelledby="tourTitulo">
+  <div class="modal" style="max-width:400px">
+    <h4 id="tourTitulo">Bem-vindo(a) ao Lean Lab Operação</h4>
+    <p class="sub">Um tour rápido de 3 passos antes de começar.</p>
+
+    <div class="tour-passo ativo" data-passo="1">
+      <div class="num">1</div>
+      <div class="txt"><h5>Painel da linha</h5><p>Mostra o status de cada posto e os indicadores da rodada, sempre atualizados com o que foi gravado no banco.</p></div>
+    </div>
+    <div class="tour-passo" data-passo="2">
+      <div class="num">2</div>
+      <div class="txt"><h5>Ler QR Code</h5><p>Aponte a câmera pra etiqueta do posto. O app calcula o tempo de ciclo e você decide: concluir, retrabalho ou anomalia.</p></div>
+    </div>
+    <div class="tour-passo" data-passo="3">
+      <div class="num">3</div>
+      <div class="txt"><h5>Relatório e Etiquetas</h5><p>O Relatório da rodada resume tudo automaticamente. Em Etiquetas você gera os QR Codes pra imprimir e testar. Toque no "?" a qualquer momento pra rever isso.</p></div>
+    </div>
+
+    <div class="tour-pontos"><span class="ativo"></span><span></span><span></span></div>
+    <div class="tour-btns">
+      <button type="button" class="tour-pular" id="tourPular">Pular</button>
+      <button type="button" class="tour-prox" id="tourProx">Próximo</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL DE AJUDA -->
+<div class="drawer-backdrop" id="ajudaBackdrop">
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="ajudaTitulo">
+    <div class="drawer-cab">
+      <h3 id="ajudaTitulo">Ajuda</h3>
+      <button class="drawer-x" id="ajudaFechar" type="button" aria-label="Fechar ajuda">✕</button>
+    </div>
+    <div class="drawer-corpo">
+      <h4>Como usar em 3 passos</h4>
+      <div class="drawer-passo"><b>1</b><p>Veja o status da linha no <b>Painel</b>.</p></div>
+      <div class="drawer-passo"><b>2</b><p>Escaneie uma etiqueta em <b>Ler QR Code</b> e decida o resultado.</p></div>
+      <div class="drawer-passo"><b>3</b><p>Acompanhe tudo somado no <b>Relatório da rodada</b>.</p></div>
+
+      <h4>Glossário</h4>
+      <dl class="glossario">
+        <dt>cmin</dt><dd>Centésimos de minuto — a unidade usada pra medir o tempo de ciclo de cada operação, mais precisa que segundos.</dd>
+        <dt>Takt</dt><dd>O ritmo que a linha precisa manter pra atender a demanda — cada peça deveria sair da linha nesse intervalo.</dd>
+        <dt>Objetivo FOS</dt><dd>O tempo de ciclo esperado pra aquele posto, definido na Folha de Operação Standard.</dd>
+        <dt>Posto restritivo</dt><dd>O posto mais lento em relação ao seu objetivo — ele que limita o ritmo de toda a linha (o "gargalo").</dd>
+        <dt>WIP / estoque em processo</dt><dd>Peças que já passaram por um posto mas ainda esperam pra entrar no próximo.</dd>
+        <dt>Aderência à FOS</dt><dd>Porcentagem das leituras que ficaram dentro do tempo esperado.</dd>
+        <dt>Lead time</dt><dd>Tempo total que uma peça leva pra passar por todos os postos, do início ao fim.</dd>
+        <dt>Retrabalho</dt><dd>Quando uma peça não passa no padrão e precisa ser corrigida antes de seguir.</dd>
+        <dt>Anomalia 5S</dt><dd>Qualquer problema observado no posto fora do padrão esperado, registrado com uma descrição.</dd>
+      </dl>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><i></i><span id="toastTxt"></span></div>
+
+<script type="module" src="js/app.js"></script>

@@ -1,0 +1,28 @@
+{
+  "name": "lean-lab-operacao",
+  "version": "1.0.0",
+  "description": "Digitalização de um laboratório de Manufatura Enxuta (UniSenai / Renault do Brasil): leitura de etiquetas por QR Code, painel de indicadores em tempo real e relatório automático de rodada.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.4"
+  },
+  "author": "Pamela da Silva Machado",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SEU-USUARIO/lean-lab-operacao.git"
+  },
+  "keywords": [
+    "lean-manufacturing",
+    "qr-code",
+    "firebase",
+    "vanilla-js",
+    "manufatura-enxuta"
+  ]
+}
