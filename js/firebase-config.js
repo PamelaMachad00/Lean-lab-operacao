@@ -16,10 +16,10 @@
  * preencher isto.
  */
 export const firebaseConfig = {
-  apiKey: 'COLE_AQUI_SUA_API_KEY',
-  authDomain: 'seu-projeto.firebaseapp.com',
-  projectId: 'seu-projeto',
-  storageBucket: 'seu-projeto.appspot.com',
-  messagingSenderId: '000000000000',
-  appId: '1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx',
+  apiKey: 'AIzaSyD1-9e8YXuhcKsMhxsuYlWHFrVz477dry0',
+  authDomain: 'lean-lab-operacao.firebaseapp.com',
+  projectId: 'lean-lab-operacao',
+  storageBucket: 'lean-lab-operacao.firebasestorage.app',
+  messagingSenderId: '683902251788',
+  appId: '1:683902251788:web:a52deab7cbbdff71058f29',
 };
