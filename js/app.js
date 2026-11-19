@@ -296,6 +296,16 @@ async function ligarCameraEntrada() {
   try {
     if (typeof QrScanner === 'undefined') throw new Error('lib ausente');
     QrScanner.WORKER_PATH = 'https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner-worker.min.js';
+    // Importante: desesconder o <video> ANTES de criar o QrScanner. Se o
+    // elemento ainda estiver com o atributo "hidden" no momento em que o
+    // QrScanner é construído, a própria biblioteca aplica um truque interno
+    // (opacity:0; width:0; height:0 via inline style) pra manter a câmera
+    // "tocando" sem aparecer — e isso gruda no elemento pra sempre, fazendo
+    // o vídeo nunca aparecer mesmo depois de tirarmos o "hidden".
+    video.hidden = false;
+    document.getElementById('entradaQuadroParado').hidden = true;
+    document.getElementById('entradaQuadroScan').hidden = false;
+    document.getElementById('entradaVisorStatus').hidden = false;
     if (!state.entradaScanner) {
       state.entradaScanner = new QrScanner(video, (resultado) => onPostoDetectadoEntrada(resultado.data || resultado), {
         returnDetailedScanResult: true,
@@ -303,10 +313,12 @@ async function ligarCameraEntrada() {
         highlightCodeOutline: false,
       });
     }
-    video.hidden = false;
-    document.getElementById('entradaQuadroParado').hidden = true;
-    document.getElementById('entradaQuadroScan').hidden = false;
-    document.getElementById('entradaVisorStatus').hidden = false;
+    // Defensivo: garante que nenhum estilo inline residual (de uma versão
+    // antiga, ou de o QrScanner ter achado o vídeo escondido por algum
+    // outro motivo) continue escondendo a imagem.
+    video.style.opacity = '';
+    video.style.width = '';
+    video.style.height = '';
     await state.entradaScanner.start();
     state.entradaScannerAtivo = true;
     video.play().catch(() => {});
@@ -687,6 +699,19 @@ async function ligarCamera() {
   try {
     if (typeof QrScanner === 'undefined') throw new Error('lib ausente');
     QrScanner.WORKER_PATH = 'https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner-worker.min.js';
+    // Importante: desesconder o <video> ANTES de criar o QrScanner. Se o
+    // elemento ainda estiver com o atributo "hidden" no momento em que o
+    // QrScanner é construído, a própria biblioteca aplica um truque interno
+    // (opacity:0; width:0; height:0 via inline style) pra manter a câmera
+    // "tocando" sem aparecer — e isso gruda no elemento pra sempre, fazendo
+    // o vídeo nunca aparecer mesmo depois de tirarmos o "hidden".
+    video.hidden = false;
+    document.getElementById('quadroParado').hidden = true;
+    document.getElementById('quadroPronto').hidden = true;
+    document.getElementById('quadroScan').hidden = false;
+    document.getElementById('visorStatus').hidden = false;
+    document.getElementById('visorStatus').textContent = 'Aponte para o QR Code da etiqueta';
+    document.getElementById('btnTrocarCam').hidden = false;
     if (!state.scanner) {
       state.scanner = new QrScanner(video, (resultado) => onQrDetectado(resultado.data || resultado), {
         returnDetailedScanResult: true,
@@ -695,13 +720,12 @@ async function ligarCamera() {
       });
       state.scanner._facingAtual = 'environment';
     }
-    video.hidden = false;
-    document.getElementById('quadroParado').hidden = true;
-    document.getElementById('quadroPronto').hidden = true;
-    document.getElementById('quadroScan').hidden = false;
-    document.getElementById('visorStatus').hidden = false;
-    document.getElementById('visorStatus').textContent = 'Aponte para o QR Code da etiqueta';
-    document.getElementById('btnTrocarCam').hidden = false;
+    // Defensivo: garante que nenhum estilo inline residual (de uma versão
+    // antiga, ou de o QrScanner ter achado o vídeo escondido por algum
+    // outro motivo) continue escondendo a imagem.
+    video.style.opacity = '';
+    video.style.width = '';
+    video.style.height = '';
     await state.scanner.start();
     state.scannerAtivo = true;
     video.play().catch(() => {});
