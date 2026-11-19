@@ -303,13 +303,18 @@ async function ligarCameraEntrada() {
         highlightCodeOutline: false,
       });
     }
-    await state.entradaScanner.start();
-    state.entradaScannerAtivo = true;
     video.hidden = false;
     document.getElementById('entradaQuadroParado').hidden = true;
     document.getElementById('entradaQuadroScan').hidden = false;
     document.getElementById('entradaVisorStatus').hidden = false;
+    await state.entradaScanner.start();
+    state.entradaScannerAtivo = true;
+    video.play().catch(() => {});
   } catch (err) {
+    video.hidden = true;
+    document.getElementById('entradaQuadroParado').hidden = false;
+    document.getElementById('entradaQuadroScan').hidden = true;
+    document.getElementById('entradaVisorStatus').hidden = true;
     toast('Não consegui acessar a câmera. Use o campo manual abaixo.', 'nok');
   }
 }
@@ -690,8 +695,6 @@ async function ligarCamera() {
       });
       state.scanner._facingAtual = 'environment';
     }
-    await state.scanner.start();
-    state.scannerAtivo = true;
     video.hidden = false;
     document.getElementById('quadroParado').hidden = true;
     document.getElementById('quadroPronto').hidden = true;
@@ -699,8 +702,16 @@ async function ligarCamera() {
     document.getElementById('visorStatus').hidden = false;
     document.getElementById('visorStatus').textContent = 'Aponte para o QR Code da etiqueta';
     document.getElementById('btnTrocarCam').hidden = false;
+    await state.scanner.start();
+    state.scannerAtivo = true;
+    video.play().catch(() => {});
     renderPassos();
   } catch (err) {
+    video.hidden = true;
+    document.getElementById('quadroParado').hidden = false;
+    document.getElementById('quadroScan').hidden = true;
+    document.getElementById('visorStatus').hidden = true;
+    document.getElementById('btnTrocarCam').hidden = true;
     toast('Não consegui acessar a câmera. Use o campo manual abaixo.', 'nok');
   }
 }
